@@ -1,10 +1,13 @@
 const express = require('express');
 const cors = require('cors');
 const { tracingMiddleware } = require('./middleware/tracing');
+const { SlidingWindowRateLimiter } = require('./middleware/rateLimiter');
 
 const app = express();
 const PORT = process.env.PORT || 8080;
 const START_TIME = Date.now();
+
+const apiRateLimiter = new SlidingWindowRateLimiter({ windowMs: 60000, maxRequests: 120 });
 
 let isReady = true;
 let totalRequests = 0;
@@ -12,6 +15,7 @@ let totalRequests = 0;
 app.use(cors());
 app.use(express.json());
 app.use(tracingMiddleware);
+app.use('/api', apiRateLimiter.middleware());
 
 // Track metrics
 app.use((req, res, next) => {
